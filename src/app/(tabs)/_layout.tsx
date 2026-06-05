@@ -66,7 +66,14 @@ export default function TabLayout() {
       .where("read", "==", false)
       .where("type", "==", "new_message")
       .onSnapshot((snap) => {
-        setUnreadCount(snap.size);
+        // Only count actual chat messages for the messages tab
+        let chatUnread = 0;
+        snap.docs.forEach(doc => {
+          if (doc.data().link?.startsWith("/chat/")) {
+            chatUnread++;
+          }
+        });
+        setUnreadCount(chatUnread);
 
         if (!initialLoad) {
           snap.docChanges().forEach((change) => {

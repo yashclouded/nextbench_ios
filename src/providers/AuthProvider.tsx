@@ -9,6 +9,8 @@ import {
   signInWithGoogle as firebaseSignInWithGoogle,
   signOut as firebaseSignOut,
   onAuthStateChanged,
+  sendMagicLink as firebaseSendMagicLink,
+  signInWithMagicLink as firebaseSignInWithMagicLink,
   type FirebaseUser,
 } from "@/services/firebase/auth";
 import { subscribeToDocument } from "@/services/firebase/firestore";
@@ -52,6 +54,10 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   /** Sign in with Google */
   signInWithGoogle: () => Promise<any>;
+  /** Send Magic Link */
+  sendMagicLink: (email: string) => Promise<void>;
+  /** Sign in with Magic Link */
+  signInWithMagicLink: (email: string, link: string) => Promise<any>;
   /** Sign out */
   signOut: () => Promise<void>;
 }
@@ -105,6 +111,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return firebaseSignInWithGoogle();
   };
 
+  const sendMagicLink = async (email: string) => {
+    return firebaseSendMagicLink(email);
+  };
+
+  const signInWithMagicLink = async (email: string, link: string) => {
+    return firebaseSignInWithMagicLink(email, link);
+  };
+
   const signOut = async () => {
     await firebaseSignOut();
   };
@@ -116,6 +130,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isLoading,
       isAuthenticated: user !== null,
       signInWithGoogle,
+      sendMagicLink,
+      signInWithMagicLink,
       signOut,
     }),
     [user, userData, isLoading]

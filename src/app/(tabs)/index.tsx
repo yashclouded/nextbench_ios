@@ -33,6 +33,7 @@ export default function FeedScreen() {
   const [savedPostIds, setSavedPostIds] = useState<Set<string>>(new Set());
 
   const [contentType, setContentType] = useState<'all' | 'posts' | 'marketplace'>('all');
+  const [generalUnreadCount, setGeneralUnreadCount] = useState(0);
   const { colorScheme, setColorScheme } = useColorScheme();
   
   const toggleTheme = () => {
@@ -73,7 +74,7 @@ export default function FeedScreen() {
               id: docSnap.id,
               ...data,
               authorName: authorData.name || data.authorName || 'Unknown User',
-              authorProfilePicture: authorData.profilePicture || data.authorProfilePicture || null,
+              authorProfilePicture: authorData.profilePicture || data.profilePicture || null,
               school: authorData.school || data.school || 'Unknown School',
             } as Post);
           });
@@ -397,9 +398,12 @@ export default function FeedScreen() {
             <TouchableOpacity 
               onPress={() => router.push('/notifications')} 
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              className="p-1"
+              className="p-1 relative"
             >
               <Bell size={20} color={iconColor} />
+              {generalUnreadCount > 0 && (
+                <View className="absolute top-0.5 right-0.5 w-2 h-2 bg-brand-pink rounded-full border border-surface dark:border-surface-dark" />
+              )}
             </TouchableOpacity>
           </View>
         </View>

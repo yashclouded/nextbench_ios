@@ -1,17 +1,22 @@
 import React, { useState } from "react";
-import { View, TouchableOpacity, ActivityIndicator } from "react-native";
+import { View, TouchableOpacity, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Text } from "@/components/ui/Text";
 import { useAuth } from "@/providers/AuthProvider";
 import { fetchDocument } from "@/services/firebase/firestore";
 import { getAuthErrorMessage } from "@/utils/firebaseErrors";
+import { setPendingMagicLinkEmail } from "@/services/firebase/auth";
+import { Mail } from "lucide-react-native";
 
 export default function LoginScreen() {
-  const { signInWithGoogle, signOut } = useAuth();
+  const { signInWithGoogle, sendMagicLink, signInWithMagicLink, signOut } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [isSendingLink, setIsSendingLink] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
+  const [email, setEmail] = useState("");
+  const [linkSent, setLinkSent] = useState(false);
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
@@ -42,6 +47,34 @@ export default function LoginScreen() {
         setError(getAuthErrorMessage(e));
       }
       setIsLoading(false);
+    }
+  };
+
+  const handleSendMagicLink = async () => {
+    if (!email || !email.includes("@")) {
+      setError("Please enter a valid email address");
+      return;
+    }
+
+    setIsSendingLink(true);
+    setError(null);
+    setNotFound(false);
+
+    try {
+      await sendMagicLink(email);
+      // Save email in memory so we can verify it when the link is clicked
+      setPendingMagicLinkEmail(email);
+      setLinkSent(true);
+      Alert.alert(
+        "Link Sent!",
+        "Check your email for the magic link to sign in. If you don't see it, check your spam folder.",
+        [{ text: "OK" }]
+      );
+    } catch (e: any) {
+      console.log("Send Magic Link Error: ", e);
+      setError(getAuthErrorMessage(e));
+    } finally {
+      setIsSendingLink(false);
     }
   };
 
@@ -87,17 +120,61 @@ export default function LoginScreen() {
           </View>
         )}
 
+        {/* Magic Link Section */}
+        <View className="w-full mb-6">
+          <View className="flex-row items-center bg-surface-soft dark:bg-surface-dark-secondary rounded-xl px-4 py-1 mb-4 border border-surface-soft dark:border-surface-dark-secondary focus:border-brand-teal">
+            <Mail size={20} color="#8E8E93" className="mr-3" />
+            <TextInput
+              className="flex-1 py-4 text-[16px] text-content dark:text-content-dark font-sans"
+              placeholder="Email address"
+              placeholderTextColor="#8E8E93"
+              keyboardType="default"
+              autoCapitalize="none"
+              autoCorrect={false}
+              value={email}
+              onChangeText={setEmail}
+              editable={!linkSent && !isSendingLink}
+            />
+          </View>
+          
+          <TouchableOpacity
+            onPress={handleSendMagicLink}
+            disabled={isSendingLink || linkSent || isLoading}
+            activeOpacity={0.8}
+            className={`flex-row items-center justify-center w-full rounded-xl py-4 shadow-sm ${
+              linkSent ? 'bg-brand-teal/20' : 'bg-brand-teal'
+            }`}
+          >
+            {isSendingLink ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text variant="caption" className={`uppercase tracking-widest font-bold ${
+                linkSent ? 'text-brand-teal' : 'text-white'
+              }`}>
+                {linkSent ? "Magic Link Sent" : "Send Magic Link"}
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        <View className="flex-row items-center w-full mb-6">
+          <View className="flex-1 h-[1px] bg-surface-soft dark:bg-surface-dark-secondary" />
+          <Text variant="caption" className="mx-4 text-content-tertiary uppercase tracking-widest font-bold">OR</Text>
+          <View className="flex-1 h-[1px] bg-surface-soft dark:bg-surface-dark-secondary" />
+        </View>
+
+        {/* Google Sign In */}
         <TouchableOpacity
           onPress={handleGoogleSignIn}
-          disabled={isLoading}
+          disabled={isLoading || isSendingLink}
           activeOpacity={0.8}
-          className="flex-row items-center justify-center w-full rounded-sm bg-content px-6 py-5 shadow-xl shadow-content/10"
+          className="flex-row items-center justify-center w-full rounded-xl bg-content dark:bg-white px-6 py-4 shadow-xl shadow-content/10"
         >
           {isLoading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={true ? '#000' : '#fff'} />
           ) : (
-            <Text variant="caption" className="text-white uppercase tracking-[0.2em] font-bold">
-              Authenticate Identity with Google
+            <Text variant="caption" className="text-white dark:text-black uppercase tracking-[0.2em] font-bold">
+              Continue with Google
             </Text>
           )}
         </TouchableOpacity>

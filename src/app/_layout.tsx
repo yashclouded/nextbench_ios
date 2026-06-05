@@ -22,6 +22,9 @@ import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import Constants from "expo-constants";
 import firestore from "@react-native-firebase/firestore";
+import * as Linking from "expo-linking";
+import { Alert } from "react-native";
+import { isMagicLink, getPendingMagicLinkEmail } from "@/services/firebase/auth";
 import {
   useFonts,
   Inter_400Regular,
@@ -41,7 +44,7 @@ SplashScreen.preventAutoHideAsync();
  * Must be inside AuthProvider to access useAuth().
  */
 function RootLayoutNav() {
-  const { isAuthenticated, userData, isLoading, user } = useAuth();
+  const { isAuthenticated, userData, isLoading, user, signInWithMagicLink } = useAuth();
   const segments = useSegments();
   const router = useRouter();
   const colorScheme = useColorScheme();
@@ -68,6 +71,44 @@ function RootLayoutNav() {
       }
     }
   }, [isAuthenticated, userData, isLoading, segments]);
+
+  // Handle incoming deep links for Magic Link Auth
+  useEffect(() => {
+    const handleUrl = async (url: string | null) => {
+      if (!url || !isMagicLink(url)) return;
+
+      try {
+        const email = getPendingMagicLinkEmail();
+
+        if (!email) {
+          // If the email isn't available, we should ideally prompt for it, 
+          // but for simplicity in this flow we'll alert the user.
+          Alert.alert(
+            "Email required",
+            "Please enter your email on the login screen, then tap the link again."
+          );
+          return;
+        }
+
+        await signInWithMagicLink(email, url);
+      } catch (error: any) {
+        console.error("Magic Link Sign In Error: ", error);
+        Alert.alert("Sign In Failed", error.message);
+      }
+    };
+
+    // Handle the initial URL (app opened from closed state)
+    Linking.getInitialURL().then(handleUrl);
+
+    // Handle URLs while the app is in the background/foreground
+    const subscription = Linking.addEventListener("url", (event) => {
+      handleUrl(event.url);
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [signInWithMagicLink]);
 
   // Request push notification permissions when authenticated
   useEffect(() => {

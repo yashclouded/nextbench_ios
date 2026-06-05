@@ -142,20 +142,34 @@ export default function NotificationsScreen() {
     }
   };
 
-  const handleClick = (notif: Notification) => {
+  const handleClick = async (notif: Notification) => {
     if (!notif.read) markAsRead(notif.id);
     // Navigate if there's a link
     if (notif.link) {
-      if (notif.link.startsWith("/chat/")) {
-        const chatId = notif.link.replace("/chat/", "");
-        router.push(`/chat/${chatId}` as any);
-      } else if (notif.link.startsWith("/product/")) {
-        const productId = notif.link.replace("/product/", "");
-        router.push(`/product/${productId}` as any);
-      } else if (notif.link.startsWith("/profile/")) {
-        const profileId = notif.link.replace("/profile/", "");
-        router.push(`/profile/${profileId}` as any);
+      let targetLink = notif.link;
+      if (targetLink === "/dashboard" || targetLink === "/") {
+        // Fallback to extract post from message for older notifications that mistakenly link to dashboard
+        let extractedTitle = null;
+        if (notif.message.includes('just posted: "')) {
+          extractedTitle = notif.message.split('just posted: "')[1]?.split('"')[0];
+        } else if (notif.message.includes('Your post "') && notif.message.includes('" has been approved!')) {
+          extractedTitle = notif.message.split('Your post "')[1]?.split('"')[0];
+        }
+        
+        if (extractedTitle) {
+          try {
+            const snap = await firestore().collection('posts').where('title', '==', extractedTitle).limit(1).get();
+            if (!snap.empty) {
+              router.push(`/post/${snap.docs[0].id}` as any);
+              return;
+            }
+          } catch (e) {
+            console.warn("Could not find post for notification fallback", e);
+          }
+        }
+        targetLink = "/";
       }
+      router.push(targetLink as any);
     }
   };
 

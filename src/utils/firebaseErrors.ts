@@ -5,11 +5,22 @@
  */
 
 export function getAuthErrorMessage(error: any): string {
-  if (!error || typeof error.code !== "string") {
+  if (!error) {
     return "An unexpected error occurred. Please try again.";
   }
 
-  switch (error.code) {
+  // Sometimes Firebase errors don't have a .code property but have the code in the message string
+  const errorCode = typeof error.code === "string" 
+    ? error.code 
+    : (typeof error.message === "string" && error.message.match(/\[(auth\/[^\]]+)\]/)) 
+      ? error.message.match(/\[(auth\/[^\]]+)\]/)[1] 
+      : null;
+
+  if (!errorCode) {
+    return error.message || "An unexpected error occurred. Please try again.";
+  }
+
+  switch (errorCode) {
     case "auth/invalid-credential":
     case "auth/user-not-found":
     case "auth/wrong-password":

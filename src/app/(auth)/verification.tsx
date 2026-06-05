@@ -1,25 +1,25 @@
-import React, { useState, useEffect } from 'react';
-import { View, ScrollView, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
 import { updateDocument } from '@/services/firebase/firestore';
+import * as ImagePicker from 'expo-image-picker';
+import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Image, ScrollView, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Text } from '@/components/ui/Text';
-import { useAuth } from '@/providers/AuthProvider';
 import { uploadToCloudinary } from '@/lib/storage';
-import { ArrowRight, CheckCircle, Camera, CreditCard, ShieldCheck } from 'lucide-react-native';
+import { useAuth } from '@/providers/AuthProvider';
+import { ArrowRight, Camera, CheckCircle, CreditCard, ShieldCheck } from 'lucide-react-native';
 
 export default function VerificationScreen() {
   const { user, userData } = useAuth();
-  
+
   const [step, setStep] = useState(1);
   const [isUploading, setIsUploading] = useState(false);
-  
+
   const [idUri, setIdUri] = useState<string | null>(null);
   const [selfieUri, setSelfieUri] = useState<string | null>(null);
 
-  // If already verified, kick to home
+  // If already verified, kick to home page back 
   useEffect(() => {
     if (userData?.verified) {
       router.replace('/(tabs)');
@@ -78,18 +78,18 @@ export default function VerificationScreen() {
         alert("Please take a selfie to continue.");
         return;
       }
-      
+
       setIsUploading(true);
       try {
         const idUrl = await uploadToCloudinary(idUri, 'nextbench/ids');
         const selfieUrl = await uploadToCloudinary(selfieUri, 'nextbench/ids');
-        
+
         await updateDocument('users', user.uid, {
           idCardUrl: idUrl,
           selfieUrl: selfieUrl,
           verificationStatus: 'pending',
         });
-        
+
         setStep(3);
       } catch (error) {
         console.error("Upload error:", error);
@@ -105,12 +105,12 @@ export default function VerificationScreen() {
   return (
     <SafeAreaView className="flex-1 bg-surface-base">
       <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 60 }} className="flex-1">
-        
+
         {/* Progress Bar */}
         <View className="flex-row items-center gap-2 mb-10 mt-4">
           {[1, 2, 3].map((s) => (
             <View key={s} className="flex-1 h-1.5 rounded-full bg-surface-soft overflow-hidden">
-              <View 
+              <View
                 className={`h-full ${step >= s ? 'bg-brand-teal' : 'bg-transparent'}`}
               />
             </View>
@@ -118,7 +118,7 @@ export default function VerificationScreen() {
         </View>
 
         <View className="bg-surface-card rounded-[2rem] p-6 border border-brand-teal/10 shadow-sm">
-          
+
           {step === 1 && (
             <View className="items-center">
               <View className="w-16 h-16 bg-brand-teal/10 rounded-2xl items-center justify-center mb-6">
@@ -128,8 +128,8 @@ export default function VerificationScreen() {
               <Text variant="body" className="text-content-secondary text-center mb-8">
                 Take a clear photo of your official student ID card. Ensure your name and photo are clearly visible.
               </Text>
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity
                 onPress={takeIdPhoto}
                 activeOpacity={0.8}
                 className="w-full aspect-video border-2 border-dashed border-brand-teal/30 rounded-[1.5rem] bg-brand-teal/5 items-center justify-center overflow-hidden mb-8"
@@ -150,7 +150,7 @@ export default function VerificationScreen() {
                   </View>
                 )}
               </TouchableOpacity>
-              
+
               <View className="flex-row items-start bg-surface-soft p-4 rounded-xl mb-4">
                 <ShieldCheck color="#00C4B5" size={20} className="mr-3 mt-0.5" />
                 <Text variant="caption" className="text-content-secondary leading-tight flex-1">
@@ -169,8 +169,8 @@ export default function VerificationScreen() {
               <Text variant="body" className="text-content-secondary text-center mb-8">
                 We need a quick selfie of you to match identity with your ID card. Smile — you're almost in.
               </Text>
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity
                 onPress={takeSelfie}
                 activeOpacity={0.8}
                 className="w-48 h-48 border-2 border-dashed border-brand-pink-soft/40 rounded-full bg-brand-pink-soft/5 items-center justify-center overflow-hidden mb-8"
@@ -201,7 +201,7 @@ export default function VerificationScreen() {
               <Text variant="body" className="text-content-secondary text-center mb-8">
                 Your credentials have been submitted for manual approval. This usually takes 2-4 hours during business days.
               </Text>
-              
+
               <View className="bg-brand-teal/10 px-6 py-4 rounded-2xl items-center mb-4">
                 <View className="flex-row items-center mb-1">
                   <ShieldCheck color="#00C4B5" size={16} className="mr-2" />
@@ -211,7 +211,7 @@ export default function VerificationScreen() {
             </View>
           )}
 
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={handleNext}
             disabled={isUploading}
             activeOpacity={0.8}
@@ -228,7 +228,7 @@ export default function VerificationScreen() {
               </>
             )}
           </TouchableOpacity>
-          
+
         </View>
       </ScrollView>
     </SafeAreaView>

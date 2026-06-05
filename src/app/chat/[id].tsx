@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { View, FlatList, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, Image, ImageBackground, useColorScheme, ActionSheetIOS, Alert, Modal, ScrollView } from "react-native";
+import { View, FlatList, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, Image, ImageBackground, useColorScheme, ActionSheetIOS, Alert, Modal, ScrollView, Linking } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
 import { Text } from "@/components/ui/Text";
@@ -12,6 +12,7 @@ import storage from "@react-native-firebase/storage";
 import * as Clipboard from 'expo-clipboard';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { Text as RNText } from "react-native";
 
 import { createNotification } from "@/lib/notifications";
 
@@ -31,7 +32,31 @@ interface Message {
   };
 }
 
-const MessageItem = ({ item, user, handleMessageLongPress, setReplyingTo }: any) => {
+const LinkedText = ({ text, isMe }: { text: string, isMe: boolean }) => {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+
+  return (
+    <Text variant="body" className={`${isMe ? 'text-white' : 'text-content dark:text-content-dark'}`}>
+      {parts.map((part, i) => {
+        if (part.match(urlRegex)) {
+          return (
+            <RNText 
+              key={i} 
+              onPress={() => Linking.openURL(part)}
+              style={{ textDecorationLine: 'underline', color: isMe ? '#E0F2FE' : '#0284C7', fontWeight: 'bold' }}
+            >
+              {part}
+            </RNText>
+          );
+        }
+        return <RNText key={i}>{part}</RNText>;
+      })}
+    </Text>
+  );
+};
+
+const MessageItem = ({ item, user, handleMessageLongPress, setReplyingTo, setSelectedImage }: any) => {
   const swipeableRef = useRef<any>(null);
   const isMe = item.senderId === user?.uid;
   const isDeleted = item.isDeletedForEveryone;
@@ -83,16 +108,20 @@ const MessageItem = ({ item, user, handleMessageLongPress, setReplyingTo }: any)
                 </View>
               )}
               {item.image && (
-                <Image 
-                  source={{ uri: item.image }} 
-                  className="w-48 h-48 rounded-lg mb-2" 
-                  resizeMode="cover"
-                />
+                <TouchableOpacity
+                  activeOpacity={0.9}
+                  onPress={() => setSelectedImage(item.image)}
+                  onLongPress={() => handleMessageLongPress(item)}
+                >
+                  <Image 
+                    source={{ uri: item.image }} 
+                    className="w-48 h-48 rounded-lg mb-2" 
+                    resizeMode="cover"
+                  />
+                </TouchableOpacity>
               )}
               {item.text && (
-                <Text variant="body" className={`${isMe ? 'text-white' : 'text-content dark:text-content-dark'}`}>
-                  {item.text}
-                </Text>
+                <LinkedText text={item.text} isMe={isMe} />
               )}
             </>
           )}
@@ -121,6 +150,7 @@ export default function ChatRoomScreen() {
   const [isMuted, setIsMuted] = useState(false);
   const [roomStatus, setRoomStatus] = useState<'active' | 'pending'>('active');
   const [requestedBy, setRequestedBy] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const flatListRef = useRef<FlatList>(null);
 
@@ -530,6 +560,7 @@ export default function ChatRoomScreen() {
         user={user} 
         handleMessageLongPress={handleMessageLongPress} 
         setReplyingTo={setReplyingTo} 
+        setSelectedImage={setSelectedImage}
       />
     );
   };
@@ -764,6 +795,25 @@ export default function ChatRoomScreen() {
               </ScrollView>
             )}
           </View>
+        </View>
+      </Modal>
+
+      {/* Image Viewer Modal */}
+      <Modal visible={!!selectedImage} transparent={true} animationType="fade" onRequestClose={() => setSelectedImage(null)}>
+        <View className="flex-1 bg-black/95 justify-center items-center">
+          <TouchableOpacity 
+            className="absolute top-16 right-6 z-50 bg-white/20 p-3 rounded-full"
+            onPress={() => setSelectedImage(null)}
+          >
+            <X size={24} color="#FFF" />
+          </TouchableOpacity>
+          {selectedImage && (
+            <Image 
+              source={{ uri: selectedImage }}
+              style={{ width: '100%', height: '100%' }}
+              resizeMode="contain"
+            />
+          )}
         </View>
       </Modal>
 
